@@ -71,13 +71,13 @@ python -m yolo.train --config train_configs/my_config.json --resume runs/my_proj
 
 ### Pretrained YOLO11 weights
 
-YOLO11n and YOLO11s has been pretrained so far. `trained_models/` is not tracked in git, so download the checkpoints from the [pretrained-weights-v1 release]() and place them at the paths below. Each pretrained checkpoint needs two things specified in the training config:
+YOLO11n and YOLO11s has been pretrained so far. `trained_models/` is not tracked in git, so download the checkpoints from the [pretrained-weights-v1 release](https://github.com/hlreicha/glassbox-yolo/releases/tag/pretrained-weights-v1) and place them at the paths below. Each pretrained checkpoint needs two things specified in the training config:
 - The model config YAML (`yolo/model_config/yolo11.yaml`), with `scale` set to match (`n` or `s`)
 - A checkpoint (`train/weights/best.pt`)
 
 | Model | Model config | Download | Place at |
 |---|---|---|---|
-| YOLO11n scratch | `yolo/model_config/yolo11.yaml` (`scale: n`) | [yolo11n-best.pt]() | `trained_models/pretrain_models/pretrained_yolo11n/train/weights/best.pt` |
+| YOLO11n scratch | `yolo/model_config/yolo11.yaml` (`scale: n`) | [yolo11n-best.pt](https://github.com/hlreicha/glassbox-yolo/releases/download/pretrained-weights-v1/yolo11n-best.pt) | `trained_models/pretrain_models/pretrained_yolo11n/train/weights/best.pt` |
 | YOLO11s scratch | `yolo/model_config/yolo11.yaml` (`scale: s`) | [yolo11s-best.pt](https://github.com/hlreicha/glassbox-yolo/releases/download/pretrained-weights-v1/yolo11s-best.pt) | `trained_models/pretrain_models/pretrained_yolo11s/train/weights/best.pt` |
 
 ONNX exports of both are also on the release page ([yolo11n-best.onnx](https://github.com/hlreicha/glassbox-yolo/releases/download/pretrained-weights-v1/yolo11n-best.onnx), [yolo11s-best.onnx](https://github.com/hlreicha/glassbox-yolo/releases/download/pretrained-weights-v1/yolo11s-best.onnx)) if you just want to run inference without training.
