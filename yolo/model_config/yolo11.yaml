@@ -1,0 +1,37 @@
+scale: n
+number_of_classes: 80
+scales:
+  n: [0.50, 0.25, 1024]
+  s: [0.50, 0.50, 1024]
+  m: [0.50, 1.00, 512] 
+  l: [1.00, 1.00, 512] 
+  x: [1.00, 1.50, 512] 
+
+model:
+  backbone:
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [64, 3, 2]}
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [128, 3, 2]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [256, False, 0.25]}
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [256, 3, 2]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [512, False, 0.25]}
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [512, 3, 2]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [512, True]}
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [1024, 3, 2]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [1024, True]}
+    - SPPF: {from_idx: -1, num_of_repeats: 1, args: [1024, 5]}
+    - C2PSA: {from_idx: -1, num_of_repeats: 2, args: [1024]}
+  head:
+    - nn.Upsample: {from_idx: -1, num_of_repeats: 1, args: [None, 2, "nearest"]}
+    - Concat: {from_idx: [-1, 6], num_of_repeats: 1, args: [1]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [512, False]}
+    - nn.Upsample: {from_idx: -1, num_of_repeats: 1, args: [None, 2, "nearest"]}
+    - Concat: {from_idx: [-1, 4], num_of_repeats: 1, args: [1]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [256, False]}
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [256, 3, 2]}
+    - Concat: {from_idx: [-1, 13], num_of_repeats: 1, args: [1]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [512, False]}
+    - Conv: {from_idx: -1, num_of_repeats: 1, args: [512, 3, 2]}
+    - Concat: {from_idx: [-1, 10], num_of_repeats: 1, args: [1]}
+    - C3k2: {from_idx: -1, num_of_repeats: 2, args: [1024, True]}
+
+    - Detect: {from_idx: [16, 19, 22], num_of_repeats: 1, args: []}
