@@ -26,7 +26,7 @@
     "ema_decay": 0.9999,
     "ema_tau": 2000,
     "rect": false,
-    "do_letterbox": false,
+    "do_letterbox": true,
     "multi_scale": false,
     "mosaic": 1.0,
     "hsv_h": 0.015,

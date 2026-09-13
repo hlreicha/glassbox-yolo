@@ -63,6 +63,7 @@ class SimplifiedConfig:
     shear: float = 0.0
     perspective: float = 0.0
     rect: bool = False
+    val_rect: bool = True
     do_letterbox: bool = True
     close_mosaic: int = 10
     erasing: float = 0.0

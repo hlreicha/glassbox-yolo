@@ -582,15 +582,20 @@ def create_dataloaders(config: SimplifiedConfig,
     }
     
     do_letterbox = getattr(config, "do_letterbox", True)
-    rect_training = getattr(config, "rect", False)
-    if rect_training and not do_letterbox:
+    rect_train = getattr(config, "rect", False)
+    if rect_train and not do_letterbox:
         print("rect requires do_letterbox=True, disabling rect")
-        rect_training = False
+        rect_train = False
+
+    rect_val = getattr(config, "val_rect", True)
+    if rect_val and not do_letterbox:
+        print("val_rect requires do_letterbox=True, disabling val_rect")
+        rect_val = False
 
     train_hyp['do_letterbox'] = do_letterbox
     val_hyp['do_letterbox'] = do_letterbox
-    train_hyp.setdefault('rect', rect_training)
-    val_hyp.setdefault('rect', rect_training)
+    train_hyp['rect'] = rect_train
+    val_hyp['rect'] = rect_val
 
     classes_to_ignore = getattr(config, 'classes_to_ignore', None) or []
     single_class = getattr(config, 'single_class', False)
@@ -602,7 +607,7 @@ def create_dataloaders(config: SimplifiedConfig,
         augment=True,
         batch_size=config.batch_size,
         transforms=None,
-        rect=rect_training,
+        rect=rect_train,
         classes_to_ignore=classes_to_ignore,
         single_class=single_class,
         do_letterbox=do_letterbox,
@@ -614,7 +619,7 @@ def create_dataloaders(config: SimplifiedConfig,
         augment=False,
         batch_size=config.batch_size,
         transforms=None,  
-        rect=rect_training,
+        rect=rect_val,
         classes_to_ignore=classes_to_ignore,
         single_class=single_class,
         do_letterbox=do_letterbox,
@@ -624,22 +629,23 @@ def create_dataloaders(config: SimplifiedConfig,
         dataset=train_dataset,
         imgsz=config.imgsz,
         hyp=train_hyp,
-        rect=rect_training
+        rect=rect_train
     )
     
     val_transforms = build_transforms(
         dataset=val_dataset,
         imgsz=config.imgsz,
         hyp=val_hyp,
-        rect=rect_training
+        rect=rect_val
     )
     
     # Set transforms on datasets
     train_dataset.transforms = train_transforms
     val_dataset.transforms = val_transforms
 
-    if rect_training:
+    if rect_train:
         train_dataset.set_rect_shapes(config.batch_size, pad=0.0)
+    if rect_val:
         val_dataset.set_rect_shapes(config.batch_size, pad=0.5)
 
     persistent = config.workers > 0
@@ -647,7 +653,7 @@ def create_dataloaders(config: SimplifiedConfig,
     def worker_init(_):
         cv2.setNumThreads(0)
 
-    if rect_training:
+    if rect_train:
         train_sampler = BatchSampler(
             SequentialSampler(train_dataset),
             batch_size=config.batch_size,
