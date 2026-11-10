@@ -1,5 +1,8 @@
 import math
+import sys
+import types
 import warnings
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
@@ -49,6 +52,29 @@ def intersect_dicts(source: Mapping[str, Any], target: Mapping[str, Any]) -> Dic
     return result
 
 
+def load_checkpoint_file(path: str | Path) -> Any:
+    """Load a trusted checkpoint written by this repo's trainer.
+
+    Checkpoints embed a pickled config dataclass, so weights_only=True cannot read them.
+    """
+    if "simplified_yolo" not in sys.modules and find_spec("simplified_yolo") is None:
+        # Checkpoints trained before the package rename pickle simplified_yolo.config.
+        from .. import config as current_config
+
+        legacy = types.ModuleType("simplified_yolo")
+        legacy.__path__ = []
+        legacy.config = current_config
+        sys.modules["simplified_yolo"] = legacy
+        sys.modules["simplified_yolo.config"] = current_config
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="You are using `torch.load` with `weights_only=False`",
+            category=FutureWarning,
+        )
+        return torch.load(path, map_location="cpu", weights_only=False)
+
+
 def read_checkpoint(path: str | Path) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     """Load a checkpoint file and return (state_dict, model_yaml).
 
@@ -60,13 +86,7 @@ def read_checkpoint(path: str | Path) -> Tuple[Dict[str, Any], Optional[Dict[str
     try:
         ckpt = torch.load(path, map_location="cpu", weights_only=True)
     except Exception:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="You are using `torch.load` with `weights_only=False`",
-                category=FutureWarning,
-            )
-            ckpt = torch.load(path, map_location="cpu", weights_only=False)
+        ckpt = load_checkpoint_file(path)
 
     if isinstance(ckpt, dict):
         entry = ckpt.get("ema") or ckpt.get("model") or ckpt

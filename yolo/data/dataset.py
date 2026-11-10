@@ -540,12 +540,15 @@ def collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
 
 
 def create_dataloaders(config: SimplifiedConfig,
-                       shuffle_val: bool = False) -> Tuple[DataLoader, DataLoader]:
+                       shuffle_val: bool = False,
+                       val_only: bool = False) -> Tuple[DataLoader | None, DataLoader]:
     """
     Create train and validation dataloaders.
     
     Args:
         config: Configuration object with dataset and training settings
+        shuffle_val: Shuffle the validation loader.
+        val_only: Skip the train split entirely and return ``(None, val_loader)``.
         
     Returns:
         Tuple of (train_loader, val_loader)
@@ -553,7 +556,7 @@ def create_dataloaders(config: SimplifiedConfig,
     from .augmentations import build_transforms
     
     data_yaml = Path(config.data)
-    train_split, num_classes = load_data_split(data_yaml, "train")
+    train_split = None if val_only else load_data_split(data_yaml, "train")[0]
     val_split,_ = load_data_split(data_yaml, "val")
     if getattr(config, 'single_class', False):
         config.nc = 1
@@ -601,7 +604,7 @@ def create_dataloaders(config: SimplifiedConfig,
     single_class = getattr(config, 'single_class', False)
 
     # Create datasets first (without transforms)
-    train_dataset = YoloDataset(
+    train_dataset = None if val_only else YoloDataset(
         train_split,
         imgsz=config.imgsz,
         augment=True,
@@ -625,35 +628,35 @@ def create_dataloaders(config: SimplifiedConfig,
         do_letterbox=do_letterbox,
     )
     # Build transforms with dataset reference
-    train_transforms = build_transforms(
-        dataset=train_dataset,
-        imgsz=config.imgsz,
-        hyp=train_hyp,
-        rect=rect_train
-    )
-    
     val_transforms = build_transforms(
         dataset=val_dataset,
         imgsz=config.imgsz,
         hyp=val_hyp,
         rect=rect_val
     )
-    
-    # Set transforms on datasets
-    train_dataset.transforms = train_transforms
     val_dataset.transforms = val_transforms
-
-    if rect_train:
-        train_dataset.set_rect_shapes(config.batch_size, pad=0.0)
     if rect_val:
         val_dataset.set_rect_shapes(config.batch_size, pad=0.5)
+
+    if train_dataset is not None:
+        train_dataset.transforms = build_transforms(
+            dataset=train_dataset,
+            imgsz=config.imgsz,
+            hyp=train_hyp,
+            rect=rect_train
+        )
+        if rect_train:
+            train_dataset.set_rect_shapes(config.batch_size, pad=0.0)
 
     persistent = config.workers > 0
 
     def worker_init(_):
         cv2.setNumThreads(0)
 
-    if rect_train:
+    train_loader = None
+    if val_only:
+        pass
+    elif rect_train:
         train_sampler = BatchSampler(
             SequentialSampler(train_dataset),
             batch_size=config.batch_size,

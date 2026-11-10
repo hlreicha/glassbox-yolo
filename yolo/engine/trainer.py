@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from ..config import SimplifiedConfig
 from ..core.logger import log_info
+from ..core.utils import load_checkpoint_file
 from ..data.dataset import create_dataloaders
 from .loss import DetectionLoss
 from .postprocess import nms, decode_bboxes
@@ -171,6 +172,13 @@ class Trainer:
 
         
 
+    def _close_mosaic(self) -> None:
+        self.train_loader.dataset.close_mosaic(
+            asdict(self.config) if is_dataclass(self.config) else vars(self.config)
+        )
+        # Persistent workers hold a stale pickled dataset, so force new workers.
+        self.train_loader._iterator = None
+
     def fit(self) -> Dict[str, float | int | str]:
         torch.manual_seed(self.config.seed or 0)
         self._set_up_training()
@@ -206,11 +214,7 @@ class Trainer:
             close_mosaic = self.config.close_mosaic or 0
             if close_mosaic > 0 and epoch >= self.config.epochs - close_mosaic and self.train_loader.dataset.mosaic:
                 log_info("Closing mosaic augmentation for the last %d epochs.", close_mosaic)
-                self.train_loader.dataset.close_mosaic(
-                    asdict(self.config) if is_dataclass(self.config) else vars(self.config)
-                )
-                # Persistent workers hold a stale pickled dataset, so force new workers.
-                self.train_loader._iterator = None
+                self._close_mosaic()
 
             running_loss = None
             self.model.train()
@@ -663,15 +667,7 @@ class Trainer:
         return checkpoint_path
 
     def load_checkpoint(self, checkpoint_path: str, resume: bool = False) -> int:
-        # Trainer checkpoints embed a SimplifiedConfig dataclass, so weights_only=True
-        # cannot deserialize them.
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="You are using `torch.load` with `weights_only=False`",
-                category=FutureWarning,
-            )
-            ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        ckpt = load_checkpoint_file(checkpoint_path)
         self.model.load_state_dict(ckpt["model"])
         if "ema" in ckpt:
             self.ema.ema_model.load_state_dict(ckpt["ema"])

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glassbox-yolo"
+version = "0.1.0"
+description = "A YOLO training pipeline re-implemented from scratch."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "torch>=2.1",
+    "torchvision",
+    "numpy",
+    "opencv-python-headless",
+    "pillow",
+    "pyyaml",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+export = ["onnx", "onnxslim"]
+test = ["pytest"]
+
+[project.scripts]
+yolo-train = "yolo.train:main"
+yolo-val = "yolo.val:main"
+yolo-predict = "yolo.predict:main"
+
+[tool.setuptools.packages.find]
+include = ["yolo", "yolo.*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+yolo = ["model_config/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

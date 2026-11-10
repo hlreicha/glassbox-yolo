@@ -4,7 +4,15 @@ A YOLO training pipeline re-implemented from scratch, mainly to understand and c
 
 ## Models
 
-The model architecture is defined by a YAML config. The repo ships with YOLOv11 and YOLOv12 style configs, supporting the standard n/s/m/l/x scales. Pretrained weights can be loaded as a starting point.
+The model architecture is defined by a YAML config. The repo ships `yolo/model_config/yolo11.yaml`, which supports the standard n/s/m/l/x scales through its `scale` field. Pretrained weights can be loaded as a starting point.
+
+## Install
+
+Install PyTorch for your platform first, then:
+
+```bash
+pip install -e .            # add ".[export]" for ONNX export, ".[test]" for the tests
+```
 
 ## Augmentation
 
@@ -148,6 +156,30 @@ For custom datasets, set `extra.nc` to the number of classes in your dataset. Th
 }
 ```
 
+## Validation
+
+Evaluate a checkpoint (loss, precision, recall, mAP50, mAP50-95) with the same code used during training:
+
+```bash
+python -m yolo.val --weights trained_models/pretrain_models/pretrained_yolo11n/train/weights/best.pt \
+    --data train_configs/coco128.yaml --per-class
+```
+
+The `--data` yaml only needs a `val` split. Other options: `--batch`, `--imgsz`, `--device`, `--workers`, `--json <file>` and `--no-ema` (use the raw weights instead of the EMA weights).
+
+## Predict
+
+Run a checkpoint on an image or a folder of images. Annotated copies are written to `--output`:
+
+```bash
+python -m yolo.predict --weights trained_models/pretrain_models/pretrained_yolo11n/train/weights/best.pt \
+    --source path/to/images --output runs/predict/exp --conf 0.25
+```
+
+Other options: `--iou`, `--imgsz`, `--max-det`, `--device`, `--no-ema` and `--save-txt` (YOLO-format label files with a confidence column).
+
+Both commands rebuild the model from the checkpoint. The model scale (n/s/m/l/x) is detected from the weights, so you do not need to edit `scale` in the yaml.
+
 ## Export
 
 ONNX export runs automatically at the end of training if `export_onnx: true` (default). To export manually:
@@ -155,3 +187,16 @@ ONNX export runs automatically at the end of training if `export_onnx: true` (de
 ```bash
 python -m yolo.export_onnx --config ./trained_models/<name>/train/training_config.json
 ```
+
+## Tests
+
+```bash
+pip install -e ".[test]"
+pytest
+```
+
+The tests run on CPU in a few seconds and also run in GitHub Actions on every push and pull request.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

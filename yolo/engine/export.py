@@ -8,6 +8,7 @@ import yaml
 from ..core.logger import log_info
 from ..core.model import SimplifiedDetectionModel
 from ..core.modules.detect import Detect
+from ..core.utils import load_checkpoint_file
 
 
 def resolve_model_cfg(cfg_path: str | Path) -> str:
@@ -22,6 +23,10 @@ def resolve_model_cfg(cfg_path: str | Path) -> str:
             if candidate.exists():
                 log_info("resolved model cfg '%s' -> '%s'", cfg_path, candidate)
                 return str(candidate)
+    packaged = Path(__file__).resolve().parents[1] / "model_config" / p.name
+    if packaged.exists():
+        log_info("model cfg '%s' not found, using packaged '%s'", cfg_path, packaged)
+        return str(packaged)
     raise FileNotFoundError(
         f"Model config not found: '{cfg_path}'. "
         "Pass an explicit model_cfg path or ensure the file exists relative to cwd."
@@ -50,7 +55,7 @@ def load_pt_model(checkpoint,
                   imgsz=None,
                   use_ema=False,
                   model_cfg=None):
-    ckpt = torch.load(checkpoint, map_location="cpu")
+    ckpt = load_checkpoint_file(checkpoint)
     config = ckpt.get("config")
     if config is None:
         raise ValueError(f"no 'config' in {checkpoint}, can't rebuild the model")
@@ -89,16 +94,8 @@ def export_onnx(
     if not checkpoint.exists():
         raise FileNotFoundError(f"checkpoint not found: {checkpoint}")
 
-    # Trainer checkpoints embed a SimplifiedConfig dataclass under "config", so
-    # weights_only=True cannot deserialize them. These files are produced by us
-    # and are trusted.
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="You are using `torch.load` with `weights_only=False`",
-            category=FutureWarning,
-        )
-        ckpt = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    # Trainer checkpoints embed a SimplifiedConfig dataclass; our own files are trusted.
+    ckpt = load_checkpoint_file(checkpoint)
     config = ckpt.get("config")
     if config is None:
         raise ValueError(f"no 'config' in {checkpoint}, can't rebuild the model")
