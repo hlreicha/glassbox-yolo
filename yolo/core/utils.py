@@ -22,26 +22,11 @@ def make_divisible(v: float, divisor: int) -> int:
 
 
 def initialize_weights(module: nn.Module) -> None:
-    """Initialize model weights following PyTorch defaults.
-
-    Skips frozen parameters so that special-purpose layers (like the DFL
-    integration conv, which is a fixed arange and has requires_grad=False)
-    are not clobbered.
-    """
+    """Keep PyTorch default conv/linear init and set BatchNorm eps/momentum."""
     for m in module.modules():
-        if isinstance(m, nn.Conv2d):
-            if m.weight.requires_grad is False:
-                continue
-            nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.ones_(m.weight)
-            nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.Linear):
-            nn.init.normal_(m.weight, 0, 0.01)
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
+        if isinstance(m, nn.BatchNorm2d):
+            m.eps = 1e-3
+            m.momentum = 0.03
 
 
 def intersect_dicts(source: Mapping[str, Any], target: Mapping[str, Any]) -> Dict[str, Any]:

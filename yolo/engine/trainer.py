@@ -204,11 +204,13 @@ class Trainer:
 
         for epoch in range(start_epoch, self.config.epochs):
             close_mosaic = self.config.close_mosaic or 0
-            if close_mosaic > 0 and epoch == self.config.epochs - close_mosaic:
+            if close_mosaic > 0 and epoch >= self.config.epochs - close_mosaic and self.train_loader.dataset.mosaic:
                 log_info("Closing mosaic augmentation for the last %d epochs.", close_mosaic)
                 self.train_loader.dataset.close_mosaic(
                     asdict(self.config) if is_dataclass(self.config) else vars(self.config)
                 )
+                # Persistent workers hold a stale pickled dataset, so force new workers.
+                self.train_loader._iterator = None
 
             running_loss = None
             self.model.train()
